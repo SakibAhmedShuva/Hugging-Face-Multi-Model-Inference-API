@@ -1,92 +1,186 @@
-# Hugging Face Multi-Model Inference API
+# Hugging-Face-Multi-Model-Inference-API
 
-## Overview
-
-The Multi-Model Inference API is a Flask-based service that provides Named Entity Recognition (NER) capabilities using multiple pre-trained models. It allows for flexible model selection, result merging, and preference-based entity selection.
+A Flask-based REST API for running inference with multiple Hugging Face NER (Named Entity Recognition) models simultaneously. This API allows you to combine results from multiple models with configurable preferences and confidence-based entity merging.
 
 ## Features
 
-- Support for multiple NER models
-- Automatic latest model detection
-- Model preference configuration
-- JSON input parsing
-- Detailed logging
-- Error handling and reporting
+- 🚀 Multi-model inference support
+- 📊 Confidence-based entity merging
+- 🎯 Model preference configuration
+- 🔄 Automatic latest model detection
+- 📁 Support for both file uploads and direct JSON input
+- 🔍 Intelligent token span handling
+- 📋 Detailed logging system
+- ✅ Health check endpoint
+
+## Prerequisites
+
+- Python 3.8+
+- pip package manager
+- Virtual environment (recommended)
 
 ## Installation
 
 1. Clone the repository:
-   ```
-   git clone https://github.com/SakibAhmedShuva/Hugging-Face-Multi-Model-Inference-API.git
-   cd Hugging-Face-Multi-Model-Inference-API
-   ```
+```bash
+git clone https://github.com/SakibAhmedShuva/Hugging-Face-Multi-Model-Inference-API.git
+cd Hugging-Face-Multi-Model-Inference-API
+```
 
-2. Create a virtual environment and activate it:
-   ```
-   python -m venv venv
-   source venv/bin/activate  # On Windows, use `venv\Scripts\activate`
-   ```
+2. Create and activate a virtual environment (recommended):
+```bash
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+```
 
-3. Install the required packages:
-   ```
-   pip install -r requirements.txt
-   ```
+3. Install required packages:
+```bash
+pip install flask transformers torch werkzeug numpy
+```
 
-4. Place your pre-trained models in the `./models` directory.
+## Project Structure
+
+```
+Hugging-Face-Multi-Model-Inference-API/
+├── app.py              # Main Flask application
+├── inference.py        # Inference logic and utilities
+├── models/            # Directory for storing NER models
+│   └── model1/       # Individual model directories
+│   └── model2/
+└── README.md
+```
 
 ## Usage
 
-1. Start the Flask server:
-   ```
-   python app.py
-   ```
+1. Place your Hugging Face NER models in the `models/` directory.
 
-2. The API will be available at `http://localhost:5000/`.
+2. Start the Flask application:
+```bash
+python app.py
+```
+
+The server will start on `http://localhost:5000`.
 
 ## API Endpoints
 
-### POST /inference
+### 1. Prediction Endpoint
 
-Performs NER inference on the provided text using specified models.
+**Endpoint:** `POST /predict`
 
-#### Request
+Accepts two types of inputs:
 
-- Content-Type: `multipart/form-data`
-- Body:
-  - `file`: JSON file containing text to analyze (optional)
-  - `model_paths`: List of model paths to use (optional)
-  - `model_preferences`: JSON string of model preferences (optional)
+#### A. Multipart Form Data
+```bash
+curl -X POST http://localhost:5000/predict \
+  -F "file=@input.json" \
+  -F "model_paths=model1" \
+  -F "model_paths=model2" \
+  -F "model_preferences={\"PERSON\":0,\"ORG\":1}"
+```
 
-If no file is provided, the API expects a JSON payload in the request body.
+#### B. Direct JSON
+```bash
+curl -X POST http://localhost:5000/predict \
+  -H "Content-Type: application/json" \
+  -d '{
+    "Objects": [
+      {"Text": "John works at Microsoft."},
+      {"Text": "Apple was founded by Steve Jobs."}
+    ]
+  }'
+```
 
-#### Response
+**Input Parameters:**
+- `file` (optional): JSON file containing text objects
+- `model_paths` (optional): List of model directories to use
+- `model_preferences` (optional): JSON object mapping entity types to preferred model indices
 
-JSON array of annotation results for each input text.
+**Response Format:**
+```json
+[
+  {
+    "id": 1,
+    "annotations": [{
+      "completed_by": 1,
+      "result": [
+        {
+          "value": {
+            "start": 0,
+            "end": 4,
+            "text": "John",
+            "labels": ["PERSON"],
+            "confidence": 0.95
+          },
+          "id": "label_uuid",
+          "from_name": "label",
+          "to_name": "text",
+          "type": "labels",
+          "origin": "manual"
+        }
+      ],
+      "result_count": 1
+    }],
+    "data": {
+      "text": "John works at Microsoft."
+    }
+  }
+]
+```
 
-## Postman Documentation
+### 2. Health Check Endpoint
 
-### Request
+**Endpoint:** `GET /health`
 
-1. Open Postman and create a new request.
-2. Set the request type to POST.
-3. Enter the URL: `http://localhost:5000/inference`
-4. In the "Body" tab, select "form-data".
-5. Add the following key-value pairs:
-   - Key: `file`, Value: Select your JSON file
-   - Key: `model_paths`, Value: `./models/model1,./models/model2` (comma-separated list of model paths)
-   - Key: `model_preferences`, Value: `{"PERSON": "0", "ORG": "1"}` (JSON string of label preferences)
+```bash
+curl http://localhost:5000/health
+```
 
-### Response
+**Response:**
+```json
+{
+  "status": "healthy"
+}
+```
 
-The API will return a JSON array of annotation results. Each result will contain:
+## Model Preferences
 
-- Annotation details (id, created_at, updated_at, etc.)
-- Recognized entities with their positions, labels, and confidence scores
-- Original input text
+You can specify which model should be preferred for specific entity types using the `model_preferences` parameter. For example:
+
+```json
+{
+  "PERSON": 0,  // Prefer first model for PERSON entities
+  "ORG": 1      // Prefer second model for ORG entities
+}
+```
 
 ## Error Handling
 
-The API includes comprehensive error handling and logging. In case of errors, it will return a JSON response with an "error" key containing the error message.
+The API returns appropriate HTTP status codes:
+- 200: Successful operation
+- 400: Invalid input
+- 404: Models not found
+- 500: Server error
+
+All errors include a JSON response with an "error" key containing the error message.
+
+## Logging
+
+The application includes comprehensive logging with the following features:
+- Request details logging
+- Model loading status
+- Entity detection results
+- Processing steps
+- Error tracking
+
+Logs are formatted with timestamps, logger name, and log level.
+
+## Contributing
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
 ## Contributing
 
