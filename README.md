@@ -1,6 +1,6 @@
 # Hugging-Face-Multi-Model-Inference-API
 
-A Flask-based REST API for running inference with multiple Hugging Face NER (Named Entity Recognition) models simultaneously. This API allows you to combine results from multiple models with configurable preferences and confidence-based entity merging.
+A Flask-based REST API for running inference with multiple Hugging Face NER (Named Entity Recognition) models simultaneously. This API allows you to combine results from multiple models with configurable preferences and confidence-based entity merging. You can import the JSON output from the API directly in Label Studio with all annotations.
 
 ## Features
 
